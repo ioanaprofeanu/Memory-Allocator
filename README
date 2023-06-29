@@ -1,0 +1,74 @@
+## Profeanu Ioana, 333CA
+# Tema2 SO - MEMORY ALLOCATOR - README file
+-------------------------------------------------------------------------------
+* Program Description
+  * Implemented a minimal version of the most important memory functions, such
+  as malloc, calloc, realloc, and free;
+-------------------------------------------------------------------------------
+* Malloc & Calloc:
+  * the two functions are implemented similarly, the only difference being that
+  the compare values for determining when to allocate with brk or with mmap is
+  different and that calloc initializes the memory with 0; the two following
+  functions are used within the memory allocation flow:
+  * allocate memory: 
+    * set the compare value according to the type of allocation (malloc/
+    calloc);
+    * if no memory was allocated, request space for a new block;
+    * otherwise, check if we should use mmap; if so, get to the last allocated
+    block and request space for a new one;
+    * if we should use sbrk, check if we can find an already allocated free
+    block; if so, use it and split the space; if not, get to the last block
+    and request space for a new one;
+  * request space:
+    * if we should use mmap, request space for a new block using the mmap call;
+    * if we should use sbrk, first no memory has been allocated with sbrk
+    before, preallocate MMAP_THRESHOLD bytes of memory with sbrk and then
+    split the block;
+    * else, check if we can expand the last block allocated with sbrk (if
+	it is free); if so, expand it by allocating only the remaining unallocated
+	space;
+    * if we cannot expand the last block, request space for a new block using
+    a sbrk call;
+-------------------------------------------------------------------------------
+* Free:
+  * the free function will find the wanted memory block and check if it is
+  valid (if is not null and not already freed); 
+  * then, if the block was allocated with sbrk, it will simply change the
+  block status to free and coalesce it with the left and right neighbor memory
+  blocks;
+  * if the block was allocated with mmap, it will unmap the memory block and
+  remove it from the blocks meta list;
+-------------------------------------------------------------------------------
+* Realloc:
+  * it first checks the corner cases (size is zero or ptr is null); it finds
+  the block we want to reallocate and checks if it is valid;
+  * if the block was allocated with mmap, it allocates a new memory block with
+  malloc copies the data from the old block to the new one and frees the old
+  block;
+  * if the block was allocated with sbrk, it checks if the new size is smaller
+  than the old one; if it is, it will perform a split on the block;
+  * if the new size is bigger than the old one, check if the next block is
+  free; if so, merge the two blocks into one (which starts with the current
+  block), update the blocks meta list, and perform a split on the result block;
+  * if the block is the last one allocated with sbrk, mark it as free - we do
+  this so when malloc is called, the block will be extended; we call the
+  malloc function to create a new block of memory, copy the data from the old
+  one and delete it;
+-------------------------------------------------------------------------------
+* Helper functions:
+  * Coalesce: given two memory blocks, if both of them are free and contiguous,
+  it will merge them into one block, updating the size and the blocks meta list
+  * Split: given a memory block, if the size of the block is bigger than a
+  given size, it will split the block into two blocks by creating a new block
+  (it does not allocate new memory, it just creates a new block metadata); if
+  the difference between the two sizes is not enough to qualify as a new block
+  (to have at least 1 byte of payload), no split will be performed;
+  * Find best free block: given size, it will find the minimum-sized block
+  larger than a given size;
+-------------------------------------------------------------------------------
+* Resources:
+  * the implementation was based on:
+- https://moss.cs.iit.edu/cs351/slides/slides-malloc.pdf
+- https://danluu.com/malloc-tutorial/
+- Github Copilot used for commenting on the code
+-------------------------------------------------------------------------------
